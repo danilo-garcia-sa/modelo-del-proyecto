@@ -4,15 +4,20 @@ import jakarta.persistence.*
 
 @Entity
 @Table(name = "estudiantes")
-data class Estudiante(
+class Estudiante(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0L,
+    var id: Long? = null,
 
-    val nombre: String,
-    val apellido: String,
-    val dni: String,
+    @Column(nullable = false, length = 100)
+    var nombre: String = "",
 
-    @Column(name = "foto_url")
-    val fotoUrl: String? = null // Para la foto carnet/DNI solicitada por el profesor
+    @Column(nullable = false, length = 100)
+    var apellido: String = "",
+
+    @Column(nullable = false, length = 20, unique = true)
+    var dni: String = "",
+
+    @Column(name = "foto_url", length = 255)
+    var fotoUrl: String? = null // Para la foto carnet/DNI solicitada por el profesor
 )
