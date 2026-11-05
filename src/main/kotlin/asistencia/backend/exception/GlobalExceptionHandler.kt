@@ -28,6 +28,36 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body)
     }
 
+    @ExceptionHandler(CursoNoEncontradoException::class)
+    fun handleCursoNoEncontrado(ex: CursoNoEncontradoException): ResponseEntity<ErrorResponse> {
+        val body = ErrorResponse(
+            status = HttpStatus.NOT_FOUND.value(),
+            error = "Not Found",
+            message = ex.message ?: "Curso no encontrado"
+        )
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body)
+    }
+
+    @ExceptionHandler(InscripcionNoEncontradaException::class)
+    fun handleInscripcionNoEncontrada(ex: InscripcionNoEncontradaException): ResponseEntity<ErrorResponse> {
+        val body = ErrorResponse(
+            status = HttpStatus.NOT_FOUND.value(),
+            error = "Not Found",
+            message = ex.message ?: "Inscripción no encontrada"
+        )
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body)
+    }
+
+    @ExceptionHandler(InscripcionDuplicadaException::class)
+    fun handleInscripcionDuplicada(ex: InscripcionDuplicadaException): ResponseEntity<ErrorResponse> {
+        val body = ErrorResponse(
+            status = HttpStatus.CONFLICT.value(),
+            error = "Conflict",
+            message = ex.message ?: "El estudiante ya está inscripto en el curso"
+        )
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body)
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
         val detalle = ex.bindingResult.fieldErrors

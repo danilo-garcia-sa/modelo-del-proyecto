@@ -3,12 +3,21 @@ package asistencia.backend.service
 import asistencia.backend.modelo.Asistencia
 import asistencia.backend.repositorio.AsistenciaRepositorio
 import org.springframework.stereotype.Service
+import java.time.LocalDate
 
 @Service
 class AsistenciaService(private val asistenciaRepositorio: AsistenciaRepositorio) {
 
-    fun listarTodas(): List<Asistencia> {
-        return asistenciaRepositorio.findAll()
+    /** Sin filtros devuelve todo; los filtros (todos opcionales) se pueden combinar. */
+    fun listar(cursoId: Long?, estudianteId: Long?, fecha: LocalDate?): List<Asistencia> {
+        val base = when {
+            cursoId != null -> asistenciaRepositorio.findByCursoId(cursoId)
+            estudianteId != null -> asistenciaRepositorio.findByEstudianteId(estudianteId)
+            else -> asistenciaRepositorio.findAll()
+        }
+        return base
+            .filter { estudianteId == null || it.estudiante?.id == estudianteId }
+            .filter { fecha == null || it.fecha == fecha }
     }
 
     fun buscarPorId(id: Long): Asistencia? {

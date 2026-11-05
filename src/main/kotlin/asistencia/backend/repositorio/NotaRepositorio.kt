@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository
 interface NotaRepositorio : JpaRepository<Nota, Long> {
     fun findByEstudianteId(estudianteId: Long): List<Nota>
     fun findByEvaluacionId(evaluacionId: Long): List<Nota>
+    fun findByEvaluacionCursoId(cursoId: Long): List<Nota>
 }

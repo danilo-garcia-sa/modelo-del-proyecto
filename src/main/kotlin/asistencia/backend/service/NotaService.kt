@@ -7,8 +7,17 @@ import org.springframework.stereotype.Service
 @Service
 class NotaService(private val notaRepositorio: NotaRepositorio) {
 
-    fun listarTodas(): List<Nota> {
-        return notaRepositorio.findAll()
+    /** Sin filtros devuelve todo; los filtros (todos opcionales) se pueden combinar. */
+    fun listar(cursoId: Long?, evaluacionId: Long?, estudianteId: Long?): List<Nota> {
+        val base = when {
+            evaluacionId != null -> notaRepositorio.findByEvaluacionId(evaluacionId)
+            cursoId != null -> notaRepositorio.findByEvaluacionCursoId(cursoId)
+            estudianteId != null -> notaRepositorio.findByEstudianteId(estudianteId)
+            else -> notaRepositorio.findAll()
+        }
+        return base
+            .filter { cursoId == null || it.evaluacion?.curso?.id == cursoId }
+            .filter { estudianteId == null || it.estudiante?.id == estudianteId }
     }
 
     fun buscarPorId(id: Long): Nota? {
