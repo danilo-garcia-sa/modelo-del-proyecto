@@ -9,9 +9,14 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/notas")
 class NotaControlador(private val notaService: NotaService) {
 
+    // Filtros opcionales: /api/notas?cursoId=1&evaluacionId=2&estudianteId=3
     @GetMapping
-    fun obtenerNotas(): List<Nota> {
-        return notaService.listarTodas()
+    fun obtenerNotas(
+        @RequestParam(required = false) cursoId: Long?,
+        @RequestParam(required = false) evaluacionId: Long?,
+        @RequestParam(required = false) estudianteId: Long?
+    ): List<Nota> {
+        return notaService.listar(cursoId, evaluacionId, estudianteId)
     }
 
     @GetMapping("/{id}")

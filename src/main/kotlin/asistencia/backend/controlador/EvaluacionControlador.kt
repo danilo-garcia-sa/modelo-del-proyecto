@@ -9,9 +9,10 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/evaluaciones")
 class EvaluacionControlador(private val evaluacionService: EvaluacionService) {
 
+    // Filtro opcional: /api/evaluaciones?cursoId=1
     @GetMapping
-    fun obtenerEvaluaciones(): List<Evaluacion> {
-        return evaluacionService.listarTodas()
+    fun obtenerEvaluaciones(@RequestParam(required = false) cursoId: Long?): List<Evaluacion> {
+        return evaluacionService.listar(cursoId)
     }
 
     @GetMapping("/{id}")

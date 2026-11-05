@@ -7,8 +7,13 @@ import org.springframework.stereotype.Service
 @Service
 class EvaluacionService(private val evaluacionRepositorio: EvaluacionRepositorio) {
 
-    fun listarTodas(): List<Evaluacion> {
-        return evaluacionRepositorio.findAll()
+    /** Sin filtro devuelve todas; con cursoId, solo las de ese curso. */
+    fun listar(cursoId: Long?): List<Evaluacion> {
+        return if (cursoId != null) {
+            evaluacionRepositorio.findByCursoId(cursoId)
+        } else {
+            evaluacionRepositorio.findAll()
+        }
     }
 
     fun buscarPorId(id: Long): Evaluacion? {
