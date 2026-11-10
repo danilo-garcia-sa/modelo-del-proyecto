@@ -28,8 +28,10 @@ import java.time.LocalDate
  *
  * - Solo corre si anotame.seed.enabled=true (en el perfil "local" ya viene activado;
  *   en el servidor de la escuela se activa con la variable de entorno ANOTAME_SEED_ENABLED=true).
- * - Cada tabla se carga SOLO si está vacía, así que reiniciar no duplica nada
- *   y no pisa lo que hayas cargado a mano.
+ * - Docentes, cursos, evaluaciones, notas y asistencias se cargan SOLO si su tabla está vacía.
+ * - Estudiantes e inscripciones se completan por DNI: se agrega lo que falte, sin duplicar.
+ *   (Si borrás a mano un alumno de prueba, vuelve a aparecer en el próximo arranque.)
+ * - Reiniciar nunca duplica nada.
  */
 @Component
 class DatosDePrueba(
@@ -51,6 +53,29 @@ class DatosDePrueba(
         const val ALEX = "25482759"
         const val CURSO_PRINCIPAL = "5to A"
     }
+
+    private data class Alumno(val nombre: String, val apellido: String, val dni: String, val curso: String)
+
+    /** 5 alumnos por curso. Todos los datos (DNI incluidos) son inventados. */
+    private val alumnos = listOf(
+        Alumno("Fabricio", "Ferrer", FABRICIO, "5to A"),
+        Alumno("Lucía", "Gómez", LUCIA, "5to A"),
+        Alumno("Alex", "Fernández", ALEX, "5to A"),
+        Alumno("Valentina", "Sosa", "41872356", "5to A"),
+        Alumno("Mateo", "Acosta", "42518903", "5to A"),
+
+        Alumno("Sofía", "Romero", "43120785", "5to B"),
+        Alumno("Thiago", "Benítez", "42987164", "5to B"),
+        Alumno("Camila", "Díaz", "44015372", "5to B"),
+        Alumno("Bruno", "Herrera", "43654891", "5to B"),
+        Alumno("Julieta", "Molina", "42203947", "5to B"),
+
+        Alumno("Lautaro", "Peralta", "43871026", "5to C"),
+        Alumno("Martina", "Ríos", "44290518", "5to C"),
+        Alumno("Nicolás", "Castro", "42746830", "5to C"),
+        Alumno("Agustina", "Ledesma", "43398205", "5to C"),
+        Alumno("Franco", "Navarro", "44102679", "5to C")
+    )
 
     @Transactional
     override fun run(args: ApplicationArguments) {
@@ -77,16 +102,18 @@ class DatosDePrueba(
         log.info("Datos de prueba: docentes cargados")
     }
 
+    /** Crea los alumnos que falten, buscándolos por DNI (así no se duplican al reiniciar). */
     private fun cargarEstudiantes() {
-        if (estudianteRepositorio.count() > 0) return
-        estudianteRepositorio.saveAll(
-            listOf(
-                Estudiante(nombre = "Fabricio", apellido = "Ferrer", dni = FABRICIO),
-                Estudiante(nombre = "Lucía", apellido = "Gómez", dni = LUCIA),
-                Estudiante(nombre = "Alex", apellido = "Fernández", dni = ALEX)
-            )
-        )
-        log.info("Datos de prueba: estudiantes cargados")
+        var nuevos = 0
+        for (alumno in alumnos) {
+            if (estudianteRepositorio.findByDni(alumno.dni) == null) {
+                estudianteRepositorio.save(
+                    Estudiante(nombre = alumno.nombre, apellido = alumno.apellido, dni = alumno.dni)
+                )
+                nuevos++
+            }
+        }
+        if (nuevos > 0) log.info("Datos de prueba: $nuevos estudiantes cargados")
     }
 
     private fun cargarCursos() {
@@ -102,15 +129,21 @@ class DatosDePrueba(
         log.info("Datos de prueba: cursos cargados")
     }
 
-    /** Los tres alumnos quedan inscriptos en 5to A; 5to B y 5to C quedan vacíos a propósito. */
+    /** Inscribe a cada alumno en su curso si todavía no lo está (5 alumnos por curso). */
     private fun cargarInscripciones() {
-        if (inscripcionRepositorio.count() > 0) return
-        val curso = cursoPrincipal() ?: return
-        val inscripciones = listOf(FABRICIO, LUCIA, ALEX)
-            .mapNotNull { dni -> estudianteRepositorio.findByDni(dni) }
-            .map { Inscripcion(estudiante = it, curso = curso) }
-        inscripcionRepositorio.saveAll(inscripciones)
-        log.info("Datos de prueba: inscripciones cargadas")
+        val cursos = cursoRepositorio.findAll().associateBy { it.nombre }
+        var nuevas = 0
+        for (alumno in alumnos) {
+            val curso = cursos[alumno.curso] ?: continue
+            val estudiante = estudianteRepositorio.findByDni(alumno.dni) ?: continue
+            val cursoId = curso.id ?: continue
+            val estudianteId = estudiante.id ?: continue
+            if (!inscripcionRepositorio.existsByEstudianteIdAndCursoId(estudianteId, cursoId)) {
+                inscripcionRepositorio.save(Inscripcion(estudiante = estudiante, curso = curso))
+                nuevas++
+            }
+        }
+        if (nuevas > 0) log.info("Datos de prueba: $nuevas inscripciones cargadas")
     }
 
     private fun cargarEvaluaciones() {

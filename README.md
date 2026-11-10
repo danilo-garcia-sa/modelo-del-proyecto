@@ -40,12 +40,14 @@ El servidor queda en `http://localhost:8080` y las rutas empiezan con `/api/`
 
 ## Datos de prueba
 
-Al arrancar, el backend puede cargar datos de prueba (docentes, 5to A/B/C, tres alumnos inscriptos
-en 5to A, tres evaluaciones, sus notas y cinco días de asistencia).
+Al arrancar, el backend puede cargar datos de prueba (docentes, 5to A/B/C con 5 alumnos inscriptos
+cada uno, y para 5to A tres evaluaciones, notas y cinco días de asistencia de los tres primeros alumnos).
+Todos los nombres y DNI son inventados.
 
 - **Casa (perfil `local`)**: viene activado.
 - **Escuela (perfil `lab`)**: apagado por defecto. Para encenderlo: `$env:ANOTAME_SEED_ENABLED="true"`.
-- Cada tabla se carga **solo si está vacía**: reiniciar no duplica nada ni pisa lo que cargues a mano.
+- Docentes, cursos, evaluaciones, notas y asistencias se cargan **solo si su tabla está vacía**.
+  Estudiantes e inscripciones se completan por DNI (se agrega lo que falte). Reiniciar no duplica nada.
 - El código está en `config/DatosDePrueba.kt`.
 
 ## Inscripciones (alumnos de cada curso)
