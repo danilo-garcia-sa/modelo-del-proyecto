@@ -38,6 +38,16 @@ El servidor queda en `http://localhost:8080` y las rutas empiezan con `/api/`
 > **Servidor de la escuela:** la tabla `inscripciones` hay que crearla una vez con
 > [`docs/inscripciones.sql`](docs/inscripciones.sql), porque ese perfil solo valida el esquema.
 
+## Datos de prueba
+
+Al arrancar, el backend puede cargar datos de prueba (docentes, 5to A/B/C, tres alumnos inscriptos
+en 5to A, tres evaluaciones, sus notas y cinco días de asistencia).
+
+- **Casa (perfil `local`)**: viene activado.
+- **Escuela (perfil `lab`)**: apagado por defecto. Para encenderlo: `$env:ANOTAME_SEED_ENABLED="true"`.
+- Cada tabla se carga **solo si está vacía**: reiniciar no duplica nada ni pisa lo que cargues a mano.
+- El código está en `config/DatosDePrueba.kt`.
+
 ## Inscripciones (alumnos de cada curso)
 
 | Método | Ruta | Qué hace |
