@@ -25,6 +25,8 @@ class CalificacionService(
 
     companion object {
         const val PUNTOS_POR_CLASE = 6
+        /** Meta confirmada con el docente: 144 puntos (24 clases × 6). No se recalcula por clases perdidas (paros, etc.). */
+        const val META_PUNTOS_POR_DEFECTO = 144
         val SISTEMAS = setOf("NOTAS", "PUNTOS")
         val BIMESTRES = setOf("BIMESTRE_1", "BIMESTRE_2")
         val CUATRIMESTRES = setOf("CUATRIMESTRE_1", "CUATRIMESTRE_2")
@@ -56,7 +58,7 @@ class CalificacionService(
             cursada = cursadaService.aRespuesta(cursada),
             puntosPorClase = PUNTOS_POR_CLASE,
             clasesContadas = clases,
-            metaPuntos = cursada.puntosAprobar ?: (clases * PUNTOS_POR_CLASE),
+            metaPuntos = cursada.puntosAprobar ?: META_PUNTOS_POR_DEFECTO,
             estudiantes = estudiantes,
             evaluaciones = evaluaciones.map { EvaluacionDto(it.id!!, it.titulo, it.descripcion, it.puntosMaximos) },
             notas = notas,

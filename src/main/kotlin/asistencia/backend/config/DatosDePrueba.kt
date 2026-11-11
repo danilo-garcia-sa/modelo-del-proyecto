@@ -69,6 +69,9 @@ class DatosDePrueba(
 
     private data class Alumno(val nombre: String, val apellido: String, val dni: String, val curso: String)
 
+    /** Fotos de perfil (carpeta public/fotos del frontend): al alumno número N de la lista le toca gatoN.jpg. */
+    private fun fotoDe(alumno: Alumno) = "/fotos/gato${alumnos.indexOf(alumno) + 1}.jpg"
+
     /** 5 alumnos por curso. Todos los datos (DNI incluidos) son inventados. */
     private val alumnos = listOf(
         Alumno("Fabricio", "Ferrer", FABRICIO, "5to A"),
@@ -120,11 +123,15 @@ class DatosDePrueba(
     private fun cargarEstudiantes() {
         var nuevos = 0
         for (alumno in alumnos) {
-            if (estudianteRepositorio.findByDni(alumno.dni) == null) {
+            val existente = estudianteRepositorio.findByDni(alumno.dni)
+            if (existente == null) {
                 estudianteRepositorio.save(
-                    Estudiante(nombre = alumno.nombre, apellido = alumno.apellido, dni = alumno.dni)
+                    Estudiante(nombre = alumno.nombre, apellido = alumno.apellido, dni = alumno.dni, fotoUrl = fotoDe(alumno))
                 )
                 nuevos++
+            } else if (existente.fotoUrl == null) {
+                existente.fotoUrl = fotoDe(alumno)
+                estudianteRepositorio.save(existente)
             }
         }
         if (nuevos > 0) log.info("Datos de prueba: $nuevos estudiantes cargados")
@@ -204,12 +211,18 @@ class DatosDePrueba(
     private fun cargarCursadas() {
         val inicio = LocalDate.of(2026, 3, 2)
         val fin = LocalDate.of(2026, 12, 11)
-        // (email del docente, curso, día de la semana)
+        // (email del docente, curso, día de la semana): cada docente da los 3 cursos, cada uno en un día distinto,
+        // y ningún curso tiene dos docentes el mismo día.
         val ejemplos = listOf(
             Triple("jblanco@etec.uba.ar", "5to A", DayOfWeek.MONDAY),
-            Triple("federicovillace@gmail.com", "5to A", DayOfWeek.MONDAY),
-            Triple("tmayorga@etec.uba.ar", "5to A", DayOfWeek.TUESDAY),
-            Triple("tmayorga@etec.uba.ar", "5to B", DayOfWeek.TUESDAY)
+            Triple("jblanco@etec.uba.ar", "5to B", DayOfWeek.WEDNESDAY),
+            Triple("jblanco@etec.uba.ar", "5to C", DayOfWeek.FRIDAY),
+            Triple("federicovillace@gmail.com", "5to A", DayOfWeek.TUESDAY),
+            Triple("federicovillace@gmail.com", "5to B", DayOfWeek.THURSDAY),
+            Triple("federicovillace@gmail.com", "5to C", DayOfWeek.MONDAY),
+            Triple("tmayorga@etec.uba.ar", "5to A", DayOfWeek.THURSDAY),
+            Triple("tmayorga@etec.uba.ar", "5to B", DayOfWeek.FRIDAY),
+            Triple("tmayorga@etec.uba.ar", "5to C", DayOfWeek.WEDNESDAY)
         )
         val cursos = cursoRepositorio.findAll().associateBy { it.nombre }
         for ((email, nombreCurso, dia) in ejemplos) {

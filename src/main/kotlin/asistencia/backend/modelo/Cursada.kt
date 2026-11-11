@@ -38,7 +38,7 @@ class Cursada(
     @Column(name = "sistema", nullable = false, length = 10, columnDefinition = "varchar(10) not null default 'NOTAS'")
     var sistema: String = "NOTAS",
 
-    /** Puntos mínimos para aprobar en el sistema de puntos. Si es null se calcula: 6 × clases con actividad. */
+    /** Puntos mínimos para aprobar en el sistema de puntos. Si es null se usa 144 (6 pts × 24 clases). */
     @Column(name = "puntos_aprobar")
     var puntosAprobar: Int? = null
 )

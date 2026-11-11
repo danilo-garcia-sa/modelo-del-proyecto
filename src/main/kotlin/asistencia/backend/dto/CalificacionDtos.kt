@@ -22,7 +22,7 @@ data class CalificacionesResponse(
     val instancias: List<InstanciaDto>
 )
 
-/** sistema = NOTAS o PUNTOS. puntosAprobar = null deja la meta automática (6 × clases). */
+/** sistema = NOTAS o PUNTOS. puntosAprobar = null usa la meta por defecto (144). */
 data class ConfiguracionRequest(
     @field:NotBlank(message = "Falta el sistema de calificación")
     val sistema: String?,

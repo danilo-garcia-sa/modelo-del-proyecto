@@ -88,7 +88,7 @@ Cada cursada tiene un sistema: **NOTAS** o **PUNTOS** (el de Joaquín: 6 puntos 
 | Método | Ruta | Para qué |
 |---|---|---|
 | GET | `/api/cursadas/{id}/calificaciones` | Todo junto: alumnos, evaluaciones, notas e instancias |
-| PUT | `/api/cursadas/{id}/configuracion` | `sistema` y `puntosAprobar` (null = 6 × clases) |
+| PUT | `/api/cursadas/{id}/configuracion` | `sistema` y `puntosAprobar` (null = 144) |
 | POST / PUT / DELETE | `/api/cursadas/{id}/evaluaciones[/{evId}]` | TPs con `puntosMaximos` |
 | PUT | `/api/cursadas/{id}/notas` | Puntos de un alumno (`valor` null = borrar) |
 | PUT | `/api/cursadas/{id}/instancias` | `BIMESTRE_1/2` con `estado` (APROBADO, EN_PROCESO, DESAPROBADO) o `CUATRIMESTRE_1/2` con `nota` entera 1-10 |
