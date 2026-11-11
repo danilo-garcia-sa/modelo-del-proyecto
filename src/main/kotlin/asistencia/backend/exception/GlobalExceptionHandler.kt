@@ -58,6 +58,26 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body)
     }
 
+    @ExceptionHandler(RecursoNoEncontradoException::class)
+    fun handleRecursoNoEncontrado(ex: RecursoNoEncontradoException): ResponseEntity<ErrorResponse> {
+        val body = ErrorResponse(
+            status = HttpStatus.NOT_FOUND.value(),
+            error = "Not Found",
+            message = ex.message ?: "Recurso no encontrado"
+        )
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body)
+    }
+
+    @ExceptionHandler(SolicitudInvalidaException::class)
+    fun handleSolicitudInvalida(ex: SolicitudInvalidaException): ResponseEntity<ErrorResponse> {
+        val body = ErrorResponse(
+            status = HttpStatus.BAD_REQUEST.value(),
+            error = "Bad Request",
+            message = ex.message ?: "Solicitud inválida"
+        )
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
         val detalle = ex.bindingResult.fieldErrors

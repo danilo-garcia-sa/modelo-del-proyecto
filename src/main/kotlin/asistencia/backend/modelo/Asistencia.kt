@@ -25,5 +25,10 @@ class Asistencia(
 
     @ManyToOne
     @JoinColumn(name = "curso_id", nullable = false)
-    var curso: Curso? = null
+    var curso: Curso? = null,
+
+    // Cursada (docente + curso + días) en la que se tomó. Es null en las asistencias viejas.
+    @ManyToOne
+    @JoinColumn(name = "cursada_id")
+    var cursada: Cursada? = null
 )

@@ -7,7 +7,10 @@ import asistencia.backend.modelo.Estudiante
 import asistencia.backend.modelo.Evaluacion
 import asistencia.backend.modelo.Inscripcion
 import asistencia.backend.modelo.Nota
+import asistencia.backend.dto.CursadaRequest
 import asistencia.backend.repositorio.AsistenciaRepositorio
+import asistencia.backend.repositorio.CursadaRepositorio
+import asistencia.backend.service.CursadaService
 import asistencia.backend.repositorio.CursoRepositorio
 import asistencia.backend.repositorio.DocenteRepositorio
 import asistencia.backend.repositorio.EstudianteRepositorio
@@ -31,6 +34,8 @@ import java.time.LocalDate
  * - Docentes, cursos, evaluaciones, notas y asistencias se cargan SOLO si su tabla está vacía.
  * - Estudiantes e inscripciones se completan por DNI: se agrega lo que falte, sin duplicar.
  *   (Si borrás a mano un alumno de prueba, vuelve a aparecer en el próximo arranque.)
+
+ * - Cursadas: se crea la que falte (docente + curso), con su calendario y asistencia de los días pasados.
  * - Reiniciar nunca duplica nada.
  */
 @Component
@@ -42,7 +47,9 @@ class DatosDePrueba(
     private val inscripcionRepositorio: InscripcionRepositorio,
     private val evaluacionRepositorio: EvaluacionRepositorio,
     private val notaRepositorio: NotaRepositorio,
-    private val asistenciaRepositorio: AsistenciaRepositorio
+    private val asistenciaRepositorio: AsistenciaRepositorio,
+    private val cursadaRepositorio: CursadaRepositorio,
+    private val cursadaService: CursadaService
 ) : ApplicationRunner {
 
     private val log = LoggerFactory.getLogger(DatosDePrueba::class.java)
@@ -87,7 +94,7 @@ class DatosDePrueba(
         cargarInscripciones()
         cargarEvaluaciones()
         cargarNotas()
-        cargarAsistencias()
+        cargarCursadas()
     }
 
     private fun cargarDocentes() {
@@ -183,50 +190,70 @@ class DatosDePrueba(
         log.info("Datos de prueba: notas cargadas")
     }
 
-    /** Últimos 5 días hábiles (hasta hoy). Casi todo PRESENTE, con una ausencia y una tardanza. */
-    private fun cargarAsistencias() {
-        if (asistenciaRepositorio.count() > 0) return
-        val curso = cursoPrincipal() ?: return
-        val dias = ultimosDiasHabiles(5)
-
-        // (dni, posición del día) -> (estado, justificación)
-        val excepciones = mapOf(
-            (LUCIA to 1) to ("AUSENTE" to "Enfermedad"),
-            (ALEX to 3) to ("TARDE" to "Transporte")
+    /**
+     * Cursadas de ejemplo (docente + curso + día de la semana) con el calendario del año generado.
+     * Solo se crean las que faltan; a las recién creadas se les carga asistencia de los días ya pasados.
+     */
+    private fun cargarCursadas() {
+        val inicio = LocalDate.of(2026, 3, 2)
+        val fin = LocalDate.of(2026, 12, 11)
+        // (email del docente, curso, día de la semana)
+        val ejemplos = listOf(
+            Triple("jblanco@etec.uba.ar", "5to A", DayOfWeek.MONDAY),
+            Triple("federicovillace@gmail.com", "5to A", DayOfWeek.MONDAY),
+            Triple("tmayorga@etec.uba.ar", "5to A", DayOfWeek.TUESDAY),
+            Triple("tmayorga@etec.uba.ar", "5to B", DayOfWeek.TUESDAY)
         )
+        val cursos = cursoRepositorio.findAll().associateBy { it.nombre }
+        for ((email, nombreCurso, dia) in ejemplos) {
+            val docente = docenteRepositorio.findByEmail(email) ?: continue
+            val curso = cursos[nombreCurso] ?: continue
+            val yaExiste = cursadaRepositorio.findByDocenteId(docente.id!!).any { it.curso?.id == curso.id }
+            if (yaExiste) continue
+            val creada = cursadaService.crear(
+                CursadaRequest(
+                    docenteId = docente.id,
+                    cursoId = curso.id,
+                    diasDeClase = listOf(dia),
+                    fechaInicio = inicio,
+                    fechaFin = fin
+                )
+            )
+            cargarAsistenciasDe(creada.id)
+            log.info("Datos de prueba: cursada ${docente.apellido} - $nombreCurso ($dia) cargada")
+        }
+    }
 
+    /**
+     * Asistencia de ejemplo para los días de clase que ya pasaron (sin contar los sin actividad).
+     * Es determinística: ~6% ausentes y ~6% tardes, siempre los mismos.
+     */
+    private fun cargarAsistenciasDe(cursadaId: Long) {
+        val planilla = cursadaService.planilla(cursadaId)
+        val cursada = cursadaRepositorio.findById(cursadaId).orElse(null) ?: return
+        val hoy = LocalDate.now()
         val asistencias = mutableListOf<Asistencia>()
-        for (dni in listOf(FABRICIO, LUCIA, ALEX)) {
-            val estudiante = estudianteRepositorio.findByDni(dni) ?: continue
-            dias.forEachIndexed { i, dia ->
-                val excepcion = excepciones[dni to i]
+        for (dia in planilla.dias) {
+            if (dia.sinActividad || dia.fecha.isAfter(hoy)) continue
+            for (est in planilla.estudiantes) {
+                val estudiante = estudianteRepositorio.findById(est.id).orElse(null) ?: continue
+                val bucket = Math.floorMod("${est.dni}-${dia.fecha}".hashCode(), 100)
+                val (estado, motivo) = when {
+                    bucket < 6 -> "AUSENTE" to (if (bucket % 2 == 0) "Enfermedad" else null)
+                    bucket < 12 -> "TARDE" to (if (bucket % 2 == 0) "Transporte" else null)
+                    else -> "PRESENTE" to null
+                }
                 asistencias.add(
                     Asistencia(
-                        fecha = dia,
-                        estado = excepcion?.first ?: "PRESENTE",
-                        justificacion = excepcion?.second,
-                        estudiante = estudiante,
-                        curso = curso
+                        fecha = dia.fecha, estado = estado, justificacion = motivo,
+                        estudiante = estudiante, curso = cursada.curso, cursada = cursada
                     )
                 )
             }
         }
         asistenciaRepositorio.saveAll(asistencias)
-        log.info("Datos de prueba: asistencias cargadas")
     }
 
     private fun cursoPrincipal(): Curso? =
         cursoRepositorio.findAll().firstOrNull { it.nombre == CURSO_PRINCIPAL }
-
-    private fun ultimosDiasHabiles(cantidad: Int): List<LocalDate> {
-        val dias = mutableListOf<LocalDate>()
-        var dia = LocalDate.now()
-        while (dias.size < cantidad) {
-            if (dia.dayOfWeek != DayOfWeek.SATURDAY && dia.dayOfWeek != DayOfWeek.SUNDAY) {
-                dias.add(dia)
-            }
-            dia = dia.minusDays(1)
-        }
-        return dias.reversed()
-    }
 }

@@ -63,3 +63,20 @@ Todos los nombres y DNI son inventados.
 - `GET /api/asistencias?cursoId=1&fecha=2026-11-05&estudianteId=3`
 - `GET /api/evaluaciones?cursoId=1`
 - `GET /api/notas?cursoId=1&evaluacionId=2&estudianteId=3`
+
+
+## Calendario y planilla de asistencia
+
+Una **cursada** es un docente dando un curso ciertos días de la semana durante un período (año o cuatrimestre).
+Al crearla, el backend genera el calendario de clases (los feriados nacionales 2026 quedan como "sin actividad").
+
+| Método | Ruta | Para qué |
+|---|---|---|
+| GET | `/api/cursadas?docenteId=` | Cursadas de un docente |
+| POST / PUT / DELETE | `/api/cursadas[/{id}]` | Crear, editar (re-sincroniza el calendario) o borrar |
+| GET | `/api/cursadas/{id}/planilla` | Días + alumnos + asistencias |
+| PUT | `/api/cursadas/{id}/asistencias` | Una celda (`estado` null = borrar). Se llama en cada click |
+| POST | `/api/cursadas/{id}/asistencias/lote` | "Todos presentes" en una fecha |
+| PUT | `/api/cursadas/{id}/dias/{fecha}` | Marcar/desmarcar un día como sin actividad |
+
+En el servidor de la escuela hay que correr una vez `docs/calendario.sql`.
