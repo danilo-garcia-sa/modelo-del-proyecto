@@ -34,7 +34,9 @@ data class CursadaResponse(
     val curso: CursoResumen,
     val diasDeClase: List<DayOfWeek>,
     val fechaInicio: LocalDate,
-    val fechaFin: LocalDate
+    val fechaFin: LocalDate,
+    val sistema: String = "NOTAS",
+    val puntosAprobar: Int? = null
 )
 
 // ---------- Planilla de asistencia ----------

@@ -29,3 +29,25 @@ ALTER TABLE asistencias ADD CONSTRAINT fk_asistencias_cursada FOREIGN KEY (cursa
 
 -- Opcional: las asistencias viejas (sin cursada) ya no se usan en la planilla.
 -- DELETE FROM asistencias WHERE cursada_id IS NULL;
+
+-- ---------------------------------------------------------------------------
+-- Calificaciones (instancias, puntos y evaluaciones por cursada)
+-- ---------------------------------------------------------------------------
+ALTER TABLE cursadas ADD COLUMN sistema VARCHAR(10) NOT NULL DEFAULT 'NOTAS';
+ALTER TABLE cursadas ADD COLUMN puntos_aprobar INT NULL;
+
+ALTER TABLE evaluaciones ADD COLUMN cursada_id BIGINT NULL;
+ALTER TABLE evaluaciones ADD COLUMN puntos_maximos INT NULL;
+ALTER TABLE evaluaciones ADD CONSTRAINT fk_evaluaciones_cursada FOREIGN KEY (cursada_id) REFERENCES cursadas (id);
+
+CREATE TABLE IF NOT EXISTS calificaciones (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    cursada_id    BIGINT      NOT NULL,
+    estudiante_id BIGINT      NOT NULL,
+    instancia     VARCHAR(20) NOT NULL,
+    nota          INT         NULL,
+    estado        VARCHAR(15) NULL,
+    CONSTRAINT uk_calificacion UNIQUE (cursada_id, estudiante_id, instancia),
+    CONSTRAINT fk_calif_cursada    FOREIGN KEY (cursada_id)    REFERENCES cursadas (id),
+    CONSTRAINT fk_calif_estudiante FOREIGN KEY (estudiante_id) REFERENCES estudiantes (id)
+);

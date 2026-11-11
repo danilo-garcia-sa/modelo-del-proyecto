@@ -10,6 +10,11 @@ import asistencia.backend.modelo.Nota
 import asistencia.backend.dto.CursadaRequest
 import asistencia.backend.repositorio.AsistenciaRepositorio
 import asistencia.backend.repositorio.CursadaRepositorio
+import asistencia.backend.dto.EvaluacionRequest
+import asistencia.backend.dto.ConfiguracionRequest
+import asistencia.backend.dto.InstanciaRequest
+import asistencia.backend.dto.NotaRequest
+import asistencia.backend.service.CalificacionService
 import asistencia.backend.service.CursadaService
 import asistencia.backend.repositorio.CursoRepositorio
 import asistencia.backend.repositorio.DocenteRepositorio
@@ -49,7 +54,8 @@ class DatosDePrueba(
     private val notaRepositorio: NotaRepositorio,
     private val asistenciaRepositorio: AsistenciaRepositorio,
     private val cursadaRepositorio: CursadaRepositorio,
-    private val cursadaService: CursadaService
+    private val cursadaService: CursadaService,
+    private val calificacionService: CalificacionService
 ) : ApplicationRunner {
 
     private val log = LoggerFactory.getLogger(DatosDePrueba::class.java)
@@ -95,6 +101,7 @@ class DatosDePrueba(
         cargarEvaluaciones()
         cargarNotas()
         cargarCursadas()
+        cargarCalificacionesDeCursadas()
     }
 
     private fun cargarDocentes() {
@@ -252,6 +259,49 @@ class DatosDePrueba(
             }
         }
         asistenciaRepositorio.saveAll(asistencias)
+    }
+
+    /**
+     * Calificaciones de ejemplo por cursada (solo si la cursada todavía no tiene nada cargado):
+     * - Joaquín (5to A): sistema de puntos, meta 144 (24 clases × 6), 3 TPs.
+     * - Mayorga (5to A): sistema de notas, con un bimestre y un cuatrimestre cargados.
+     */
+    private fun cargarCalificacionesDeCursadas() {
+        val cursos = cursoRepositorio.findAll().associateBy { it.nombre }
+        val cursoA = cursos[CURSO_PRINCIPAL] ?: return
+
+        val joaquin = docenteRepositorio.findByEmail("jblanco@etec.uba.ar")
+        val cursadaJoaquin = joaquin?.let { d -> cursadaRepositorio.findByDocenteId(d.id!!).firstOrNull { it.curso?.id == cursoA.id } }
+        if (cursadaJoaquin != null && cursadaJoaquin.puntosAprobar == null &&
+            calificacionService.obtener(cursadaJoaquin.id!!).evaluaciones.isEmpty()
+        ) {
+            val id = cursadaJoaquin.id!!
+            calificacionService.configurar(id, ConfiguracionRequest(sistema = "PUNTOS", puntosAprobar = 144))
+            val tps = listOf("TP 1" to 25, "TP 2" to 25, "TP 3" to 30)
+                .map { (titulo, pts) -> calificacionService.crearEvaluacion(id, EvaluacionRequest(titulo, null, pts)) }
+            val estudiantes = calificacionService.obtener(id).estudiantes
+            estudiantes.forEachIndexed { i, est ->
+                tps.forEachIndexed { j, tp ->
+                    val max = tp.puntosMaximos ?: 25
+                    val puntos = (max - ((i * 3 + j * 5) % 9)).coerceAtLeast(0).toDouble()
+                    calificacionService.guardarNota(id, NotaRequest(est.id, tp.id, puntos))
+                }
+            }
+            log.info("Datos de prueba: cursada de Joaquín configurada con puntos y TPs")
+        }
+
+        val mayorga = docenteRepositorio.findByEmail("tmayorga@etec.uba.ar")
+        val cursadaMayorga = mayorga?.let { d -> cursadaRepositorio.findByDocenteId(d.id!!).firstOrNull { it.curso?.id == cursoA.id } }
+        if (cursadaMayorga != null && calificacionService.obtener(cursadaMayorga.id!!).instancias.isEmpty()) {
+            val id = cursadaMayorga.id!!
+            val estados = listOf("APROBADO", "APROBADO", "EN_PROCESO", "APROBADO", "DESAPROBADO")
+            val notas = listOf(9.0, 8.0, 6.0, 7.0, 4.0)
+            calificacionService.obtener(id).estudiantes.forEachIndexed { i, est ->
+                calificacionService.guardarInstancia(id, InstanciaRequest(est.id, "BIMESTRE_1", null, estados[i % estados.size]))
+                calificacionService.guardarInstancia(id, InstanciaRequest(est.id, "CUATRIMESTRE_1", notas[i % notas.size], null))
+            }
+            log.info("Datos de prueba: instancias cargadas en la cursada de Mayorga")
+        }
     }
 
     private fun cursoPrincipal(): Curso? =

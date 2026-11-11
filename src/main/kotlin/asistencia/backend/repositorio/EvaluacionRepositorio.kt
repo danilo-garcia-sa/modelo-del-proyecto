@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository
 @Repository
 interface EvaluacionRepositorio : JpaRepository<Evaluacion, Long> {
     fun findByCursoId(cursoId: Long): List<Evaluacion>
+    fun findByCursadaId(cursadaId: Long): List<Evaluacion>
 }

@@ -21,7 +21,10 @@ class CursadaService(
     private val inscripcionRepositorio: InscripcionRepositorio,
     private val docenteRepositorio: DocenteRepositorio,
     private val cursoRepositorio: CursoRepositorio,
-    private val estudianteRepositorio: EstudianteRepositorio
+    private val estudianteRepositorio: EstudianteRepositorio,
+    private val evaluacionRepositorio: EvaluacionRepositorio,
+    private val notaRepositorio: NotaRepositorio,
+    private val calificacionRepositorio: CalificacionRepositorio
 ) {
 
     companion object {
@@ -81,6 +84,11 @@ class CursadaService(
     @Transactional
     fun eliminar(id: Long) {
         val cursada = buscar(id)
+        evaluacionRepositorio.findByCursadaId(id).forEach { ev ->
+            notaRepositorio.deleteByEvaluacionId(ev.id!!)
+            evaluacionRepositorio.delete(ev)
+        }
+        calificacionRepositorio.deleteByCursadaId(id)
         asistenciaRepositorio.deleteByCursadaId(id)
         diaRepositorio.deleteByCursadaId(id)
         cursadaRepositorio.delete(cursada)
@@ -248,12 +256,14 @@ class CursadaService(
     private fun parsearDias(texto: String): List<DayOfWeek> =
         texto.split(",").mapNotNull { it.trim().toIntOrNull() }.map { DayOfWeek.of(it) }
 
-    private fun aRespuesta(c: Cursada): CursadaResponse = CursadaResponse(
+    fun aRespuesta(c: Cursada): CursadaResponse = CursadaResponse(
         id = c.id!!,
         docente = DocenteResumen(c.docente!!.id!!, c.docente!!.nombre, c.docente!!.apellido),
         curso = CursoResumen(c.curso!!.id!!, c.curso!!.nombre, c.curso!!.anioLectivo),
         diasDeClase = parsearDias(c.dias),
         fechaInicio = c.fechaInicio,
-        fechaFin = c.fechaFin
+        fechaFin = c.fechaFin,
+        sistema = c.sistema,
+        puntosAprobar = c.puntosAprobar
     )
 }

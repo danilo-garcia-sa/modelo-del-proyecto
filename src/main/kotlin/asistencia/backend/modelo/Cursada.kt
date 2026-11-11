@@ -32,5 +32,13 @@ class Cursada(
     var fechaInicio: LocalDate = LocalDate.now(),
 
     @Column(name = "fecha_fin", nullable = false)
-    var fechaFin: LocalDate = LocalDate.now()
+    var fechaFin: LocalDate = LocalDate.now(),
+
+    /** "NOTAS" (instancias con nota 1 a 10) o "PUNTOS" (se suman puntos de TPs; ej. el sistema de Joaquín). */
+    @Column(name = "sistema", nullable = false, length = 10, columnDefinition = "varchar(10) not null default 'NOTAS'")
+    var sistema: String = "NOTAS",
+
+    /** Puntos mínimos para aprobar en el sistema de puntos. Si es null se calcula: 6 × clases con actividad. */
+    @Column(name = "puntos_aprobar")
+    var puntosAprobar: Int? = null
 )

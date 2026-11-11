@@ -80,3 +80,17 @@ Al crearla, el backend genera el calendario de clases (los feriados nacionales 2
 | PUT | `/api/cursadas/{id}/dias/{fecha}` | Marcar/desmarcar un día como sin actividad |
 
 En el servidor de la escuela hay que correr una vez `docs/calendario.sql`.
+
+## Calificaciones
+
+Cada cursada tiene un sistema: **NOTAS** o **PUNTOS** (el de Joaquín: 6 puntos por clase, los TPs suman puntos).
+
+| Método | Ruta | Para qué |
+|---|---|---|
+| GET | `/api/cursadas/{id}/calificaciones` | Todo junto: alumnos, evaluaciones, notas e instancias |
+| PUT | `/api/cursadas/{id}/configuracion` | `sistema` y `puntosAprobar` (null = 6 × clases) |
+| POST / PUT / DELETE | `/api/cursadas/{id}/evaluaciones[/{evId}]` | TPs con `puntosMaximos` |
+| PUT | `/api/cursadas/{id}/notas` | Puntos de un alumno (`valor` null = borrar) |
+| PUT | `/api/cursadas/{id}/instancias` | `BIMESTRE_1/2` con `estado` (APROBADO, EN_PROCESO, DESAPROBADO) o `CUATRIMESTRE_1/2` con `nota` entera 1-10 |
+
+Las columnas nuevas también están en `docs/calendario.sql` (para el servidor de la escuela).
