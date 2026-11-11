@@ -1,6 +1,7 @@
 package asistencia.backend.service
 
 import asistencia.backend.dto.EstudianteRequest
+import asistencia.backend.exception.SolicitudInvalidaException
 import asistencia.backend.dto.EstudianteResponse
 import asistencia.backend.modelo.Estudiante
 import asistencia.backend.exception.EstudianteNoEncontradoException
@@ -37,10 +38,13 @@ class EstudianteService(private val estudianteRepositorio: EstudianteRepositorio
 
     @Transactional
     fun crear(req: EstudianteRequest): EstudianteResponse {
+        if (estudianteRepositorio.findByDni(req.dni.trim()) != null) {
+            throw SolicitudInvalidaException("Ya hay un estudiante con el DNI ${req.dni.trim()}")
+        }
         val nuevoEstudiante = Estudiante().apply {
             nombre = req.nombre
             apellido = req.apellido
-            dni = req.dni
+            dni = req.dni.trim()
             fotoUrl = req.fotoUrl
         }
         val guardado = estudianteRepositorio.save(nuevoEstudiante)

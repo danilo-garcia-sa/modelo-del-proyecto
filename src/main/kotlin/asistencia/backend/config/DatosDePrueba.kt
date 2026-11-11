@@ -211,17 +211,16 @@ class DatosDePrueba(
     private fun cargarCursadas() {
         val inicio = LocalDate.of(2026, 3, 2)
         val fin = LocalDate.of(2026, 12, 11)
-        // (email del docente, curso, día de la semana): cada docente da los 3 cursos, cada uno en un día distinto,
-        // y ningún curso tiene dos docentes el mismo día.
+        // (email del docente, curso, día de la semana): cada docente da los 3 cursos, cada uno en un día distinto.
         val ejemplos = listOf(
             Triple("jblanco@etec.uba.ar", "5to A", DayOfWeek.MONDAY),
-            Triple("jblanco@etec.uba.ar", "5to B", DayOfWeek.WEDNESDAY),
-            Triple("jblanco@etec.uba.ar", "5to C", DayOfWeek.FRIDAY),
+            Triple("jblanco@etec.uba.ar", "5to B", DayOfWeek.TUESDAY),
+            Triple("jblanco@etec.uba.ar", "5to C", DayOfWeek.WEDNESDAY),
             Triple("federicovillace@gmail.com", "5to A", DayOfWeek.TUESDAY),
-            Triple("federicovillace@gmail.com", "5to B", DayOfWeek.THURSDAY),
-            Triple("federicovillace@gmail.com", "5to C", DayOfWeek.MONDAY),
-            Triple("tmayorga@etec.uba.ar", "5to A", DayOfWeek.THURSDAY),
-            Triple("tmayorga@etec.uba.ar", "5to B", DayOfWeek.FRIDAY),
+            Triple("federicovillace@gmail.com", "5to B", DayOfWeek.WEDNESDAY),
+            Triple("federicovillace@gmail.com", "5to C", DayOfWeek.THURSDAY),
+            Triple("tmayorga@etec.uba.ar", "5to A", DayOfWeek.FRIDAY),
+            Triple("tmayorga@etec.uba.ar", "5to B", DayOfWeek.THURSDAY),
             Triple("tmayorga@etec.uba.ar", "5to C", DayOfWeek.WEDNESDAY)
         )
         val cursos = cursoRepositorio.findAll().associateBy { it.nombre }
@@ -275,45 +274,41 @@ class DatosDePrueba(
     }
 
     /**
-     * Calificaciones de ejemplo por cursada (solo si la cursada todavía no tiene nada cargado):
-     * - Joaquín (5to A): sistema de puntos, meta 144 (24 clases × 6), 3 TPs.
-     * - Mayorga (5to A): sistema de notas, con un bimestre y un cuatrimestre cargados.
+     * Calificaciones de ejemplo por cursada, solo donde todavía no hay nada cargado:
+     * - Cursadas de Joaquín: sistema de puntos, meta 144 y 6 TPs (25, 25, 20, 30, 25, 25 puntos).
+     * - Todas: 1er bimestre, 1er cuatrimestre y 2do bimestre (el 2do cuatrimestre todavía no cerró).
+     *   Los bimestres salen de la nota: 7 o más aprobado, 6 en proceso, menos desaprobado.
      */
     private fun cargarCalificacionesDeCursadas() {
-        val cursos = cursoRepositorio.findAll().associateBy { it.nombre }
-        val cursoA = cursos[CURSO_PRINCIPAL] ?: return
+        for (cursada in cursadaRepositorio.findAll()) {
+            val id = cursada.id ?: continue
+            val datos = calificacionService.obtener(id)
 
-        val joaquin = docenteRepositorio.findByEmail("jblanco@etec.uba.ar")
-        val cursadaJoaquin = joaquin?.let { d -> cursadaRepositorio.findByDocenteId(d.id!!).firstOrNull { it.curso?.id == cursoA.id } }
-        if (cursadaJoaquin != null && cursadaJoaquin.puntosAprobar == null &&
-            calificacionService.obtener(cursadaJoaquin.id!!).evaluaciones.isEmpty()
-        ) {
-            val id = cursadaJoaquin.id!!
-            calificacionService.configurar(id, ConfiguracionRequest(sistema = "PUNTOS", puntosAprobar = 144))
-            val tps = listOf("TP 1" to 25, "TP 2" to 25, "TP 3" to 30)
-                .map { (titulo, pts) -> calificacionService.crearEvaluacion(id, EvaluacionRequest(titulo, null, pts)) }
-            val estudiantes = calificacionService.obtener(id).estudiantes
-            estudiantes.forEachIndexed { i, est ->
-                tps.forEachIndexed { j, tp ->
-                    val max = tp.puntosMaximos ?: 25
-                    val puntos = (max - ((i * 3 + j * 5) % 9)).coerceAtLeast(0).toDouble()
-                    calificacionService.guardarNota(id, NotaRequest(est.id, tp.id, puntos))
+            if (cursada.docente?.email == "jblanco@etec.uba.ar" && cursada.puntosAprobar == null && datos.evaluaciones.isEmpty()) {
+                calificacionService.configurar(id, ConfiguracionRequest(sistema = "PUNTOS", puntosAprobar = 144))
+                val tps = listOf("TP 1" to 25, "TP 2" to 25, "TP 3" to 20, "TP 4" to 30, "TP 5" to 25, "TP 6" to 25)
+                    .map { (titulo, pts) -> calificacionService.crearEvaluacion(id, EvaluacionRequest(titulo, null, pts)) }
+                datos.estudiantes.forEach { est ->
+                    tps.forEachIndexed { j, tp ->
+                        val max = tp.puntosMaximos ?: 25
+                        val porcentaje = 60 + Math.floorMod("${est.dni}-$id-$j".hashCode(), 41)
+                        calificacionService.guardarNota(id, NotaRequest(est.id, tp.id, Math.round(max * porcentaje / 100.0).toDouble()))
+                    }
                 }
+                log.info("Datos de prueba: cursada ${cursada.curso?.nombre} de Joaquín con puntos y TPs")
             }
-            log.info("Datos de prueba: cursada de Joaquín configurada con puntos y TPs")
-        }
 
-        val mayorga = docenteRepositorio.findByEmail("tmayorga@etec.uba.ar")
-        val cursadaMayorga = mayorga?.let { d -> cursadaRepositorio.findByDocenteId(d.id!!).firstOrNull { it.curso?.id == cursoA.id } }
-        if (cursadaMayorga != null && calificacionService.obtener(cursadaMayorga.id!!).instancias.isEmpty()) {
-            val id = cursadaMayorga.id!!
-            val estados = listOf("APROBADO", "APROBADO", "EN_PROCESO", "APROBADO", "DESAPROBADO")
-            val notas = listOf(9.0, 8.0, 6.0, 7.0, 4.0)
-            calificacionService.obtener(id).estudiantes.forEachIndexed { i, est ->
-                calificacionService.guardarInstancia(id, InstanciaRequest(est.id, "BIMESTRE_1", null, estados[i % estados.size]))
-                calificacionService.guardarInstancia(id, InstanciaRequest(est.id, "CUATRIMESTRE_1", notas[i % notas.size], null))
+            if (datos.instancias.isEmpty()) {
+                datos.estudiantes.forEach { est ->
+                    val base = 4 + Math.floorMod("${est.dni}-$id".hashCode(), 7) // 4 a 10
+                    val segundo = (base + Math.floorMod("${est.dni}-$id-b".hashCode(), 3) - 1).coerceIn(1, 10)
+                    fun estado(nota: Int) = if (nota >= 7) "APROBADO" else if (nota == 6) "EN_PROCESO" else "DESAPROBADO"
+                    calificacionService.guardarInstancia(id, InstanciaRequest(est.id, "BIMESTRE_1", null, estado(base)))
+                    calificacionService.guardarInstancia(id, InstanciaRequest(est.id, "CUATRIMESTRE_1", base.toDouble(), null))
+                    calificacionService.guardarInstancia(id, InstanciaRequest(est.id, "BIMESTRE_2", null, estado(segundo)))
+                }
+                log.info("Datos de prueba: instancias cargadas en la cursada ${cursada.curso?.nombre} de ${cursada.docente?.apellido}")
             }
-            log.info("Datos de prueba: instancias cargadas en la cursada de Mayorga")
         }
     }
 
