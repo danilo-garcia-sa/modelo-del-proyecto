@@ -189,17 +189,20 @@ class CursadaService(
     /**
      * Deja el calendario de la cursada igual a lo que dicen sus días y su período:
      * agrega las fechas que faltan (marcando feriados como sin actividad), quita las que ya no corresponden
-     * (salvo que tengan asistencia cargada, para no perder datos) y renumera las clases.
+     * (junto con la asistencia que tuvieran cargada) y renumera las clases.
      */
     private fun sincronizarCalendario(cursada: Cursada) {
         val id = cursada.id!!
         val dias = parsearDias(cursada.dias).toSet()
         val deseadas = generarFechas(dias, cursada.fechaInicio, cursada.fechaFin).toSet()
         val existentes = diaRepositorio.findByCursadaIdOrderByFecha(id)
-        val conAsistencia = asistenciaRepositorio.findByCursadaId(id).map { it.fecha }.toSet()
 
-        val sobrantes = existentes.filter { it.fecha !in deseadas && it.fecha !in conAsistencia }
-        diaRepositorio.deleteAll(sobrantes)
+        val sobrantes = existentes.filter { it.fecha !in deseadas }
+        if (sobrantes.isNotEmpty()) {
+            val fechasSobrantes = sobrantes.map { it.fecha }.toSet()
+            asistenciaRepositorio.deleteAll(asistenciaRepositorio.findByCursadaId(id).filter { it.fecha in fechasSobrantes })
+            diaRepositorio.deleteAll(sobrantes)
+        }
 
         val fechasExistentes = existentes.map { it.fecha }.toSet()
         val nuevos = deseadas.filter { it !in fechasExistentes }.map { f ->
