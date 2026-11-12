@@ -1,24 +1,12 @@
 # Anotame! — backend
-
-API en Kotlin + Spring Boot + MariaDB para registrar asistencia y calcular calificaciones.
-
-## Cómo correrlo
-
-El proyecto tiene dos perfiles de base de datos:
-
-| Perfil | Dónde | Base | Esquema |
-|--------|-------|------|---------|
-| `lab` (por defecto) | Escuela | Servidor de la escuela (`Anotame-UBA`) | Ya existe (`ddl-auto=validate`) |
-| `local` | Casa | MariaDB local (`etec_anotame`) | Lo crea Hibernate (`ddl-auto=update`) |
-
-### En la escuela (PowerShell)
+### En la escuela 
 
 ```powershell
 $env:DB_PASSWORD="la-clave-del-servidor"
 .\mvnw spring-boot:run
 ```
 
-### En casa (PowerShell)
+### En casa
 
 1. Creá la base vacía en tu MariaDB: `CREATE DATABASE etec_anotame;`
 2. Corré:
